@@ -59,14 +59,15 @@ void sbuffer_destroy(sbuffer_t* buffer) {
     free(buffer);
 }
 
-void sbuffer_lock(sbuffer_t* buffer) {
-    assert(buffer);
-    ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
-}
-void sbuffer_unlock(sbuffer_t* buffer) {
-    assert(buffer);
-    ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
-}
+// void sbuffer_lock(sbuffer_t* buffer) {
+//     assert(buffer);
+//     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
+// }
+
+// void sbuffer_unlock(sbuffer_t* buffer) {
+//     assert(buffer);
+//     ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
+// }
 
 bool sbuffer_is_empty(sbuffer_t* buffer) {
     assert(buffer);
@@ -110,6 +111,16 @@ sensor_data_t sbuffer_remove_last(sbuffer_t* buffer) {
     buffer->tail = removed_node->prev;
     sensor_data_t ret = removed_node->data;
     free(removed_node);
+
+    return ret;
+}
+
+sensor_data_t sbuffer_get_last(sbuffer_t* buffer) {
+    assert(buffer);
+    assert(buffer->head != NULL);
+    assert(buffer->tail != NULL);
+
+    sensor_data_t ret = buffer->tail->data;
 
     return ret;
 }

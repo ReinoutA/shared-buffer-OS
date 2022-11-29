@@ -22,17 +22,23 @@
 #include <sys/types.h>
 #include <wait.h>
 
+static pthread_mutex_t pthread_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t dataToProcess = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t dataToStore = PTHREAD_COND_INITIALIZER;
+
 static int print_usage() {
     printf("Usage: <command> <port number> \n");
     return -1;
 }
 
+/*
 static void* datamgr_run(void* buffer) {
     datamgr_init();
 
     // datamgr loop
     while (true) {
         sbuffer_lock(buffer);
+    
         if (!sbuffer_is_empty(buffer)) {
             sensor_data_t data = sbuffer_remove_last(buffer);
             datamgr_process_reading(&data);
@@ -50,7 +56,32 @@ static void* datamgr_run(void* buffer) {
 
     return NULL;
 }
+*/
 
+static void* datamgr_run(void* buffer) {
+    datamgr_init();
+
+    // datamgr loop
+    while (true) {
+        pthread_mutex_lock(&pthread_mutex);
+
+        while (sbuffer_is_empty(buffer))
+            pthread_cond_wait(&dataToProcess, &pthread_mutex);
+
+        sensor_data_t data = sbuffer_get_last(buffer);
+        datamgr_process_reading(&data);
+                
+        // notify the thread to store the sensor data
+        pthread_cond_signal (&dataToStore);
+        pthread_mutex_unlock (&pthread_mutex);        
+    }
+
+    datamgr_free();
+
+    return NULL;
+}
+
+/*
 static void* storagemgr_run(void* buffer) {
     DBCONN* db = storagemgr_init_connection(1);
     assert(db != NULL);
@@ -74,6 +105,28 @@ static void* storagemgr_run(void* buffer) {
     storagemgr_disconnect(db);
     return NULL;
 }
+*/
+
+static void* storagemgr_run(void* buffer) {
+    DBCONN* db = storagemgr_init_connection(1);
+    assert(db != NULL);
+
+    // storagemgr loop
+    while (true) {
+        pthread_mutex_lock(&pthread_mutex);
+
+        while (sbuffer_is_empty(buffer))
+            pthread_cond_wait(&dataToStore, &pthread_mutex);
+
+        sensor_data_t data = sbuffer_remove_last(buffer);
+        storagemgr_insert_sensor(db, data.id, data.value, data.ts);
+
+        pthread_mutex_unlock (&pthread_mutex);   
+    }
+
+    storagemgr_disconnect(db);
+    return NULL;
+}
 
 int main(int argc, char* argv[]) {
     if (argc != 2)
@@ -92,9 +145,16 @@ int main(int argc, char* argv[]) {
     pthread_t storagemgr_thread;
     ASSERT_ELSE_PERROR(pthread_create(&storagemgr_thread, NULL, storagemgr_run, buffer) == 0);
 
-    // main server loop
-    connmgr_listen(port_number, buffer);
+    pthread_t connmgr_thread;
+    ASSERT_ELSE_PERROR(pthread_create(&connmgr_thread, NULL, connmgr_listen, buffer) == 0);
 
+    // main server loop
+    //connmgr_listen(port_number, buffer);
+
+    // first, check if all sbuffer data has been processed + sbuffer is empty
+    // second, close the buffer
+
+    // TODO remove the lock and unlock functions
     sbuffer_lock(buffer);
     sbuffer_close(buffer);
     sbuffer_unlock(buffer);

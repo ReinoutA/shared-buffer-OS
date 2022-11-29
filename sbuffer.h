@@ -54,6 +54,12 @@ int sbuffer_insert_first(sbuffer_t* buffer, sensor_data_t const* data);
 sensor_data_t sbuffer_remove_last(sbuffer_t* buffer);
 
 /**
+ * Returns the last measurement in the buffer (at the 'tail')
+ * \return the last measurement
+ */
+sensor_data_t sbuffer_get_last(sbuffer_t* buffer);
+
+/**
  * Closes the buffer. This signifies that no more data will be inserted.
  */
 void sbuffer_close(sbuffer_t* buffer);
