@@ -16,8 +16,10 @@
 #include <sys/poll.h>
 #include <time.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <wait.h>
 
-void connmgr_listen(int port_number, sbuffer_t* buffer) {
+void connmgr_listen(int port_number, sbuffer_t* buffer, pthread_mutex_t* ppthread_mutex, pthread_cond_t* pConditionToProcess) {
 
 #if DEBUG
     const int fd =
@@ -95,15 +97,17 @@ void connmgr_listen(int port_number, sbuffer_t* buffer) {
                             ASSERT_ELSE_PERROR(write(fd, &data.ts, sizeof(data.ts)) == sizeof(data.ts));
 #endif
                             printf("sensor id = %" PRIu16 " - temperature = %g - timestamp = %ld\n", data.id, data.value, data.ts);
-                            // TODO remove
+                            
                             //sbuffer_lock(buffer);
+                            pthread_mutex_lock (ppthread_mutex);
                             int ret = sbuffer_insert_first(buffer, &data);
                             assert(ret == SBUFFER_SUCCESS);
+        
+                            // notify the thread to store the sensor data
+                            pthread_cond_signal (pConditionToProcess);                                    
 
-                            // how can we use a condition here ???
-                            //pthread_cond_signal(&dataToRead, &pthread_mutex);
+                            pthread_mutex_unlock (ppthread_mutex); 
 
-                            // TODO remove
                             //sbuffer_unlock(buffer);
                         } else if (result == TCP_CONNECTION_CLOSED) {
                             printf("Sensor with id %" PRIu16 " disconnected\n", *tcp_last_seen_sensor_id(socket));

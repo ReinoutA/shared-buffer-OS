@@ -65,12 +65,14 @@ static void* datamgr_run(void* buffer) {
     while (true) {
         pthread_mutex_lock(&pthread_mutex);
 
-        while (sbuffer_is_empty(buffer))
+        while (!sbuffer_has_data_to_process(buffer))
             pthread_cond_wait(&dataToProcess, &pthread_mutex);
 
         sensor_data_t data = sbuffer_get_last(buffer);
         datamgr_process_reading(&data);
-                
+        printf("sensor id = %d - temperature = %g - PROCESSED\n", data.id, data.value);
+        
+
         // notify the thread to store the sensor data
         pthread_cond_signal (&dataToStore);
         pthread_mutex_unlock (&pthread_mutex);        
@@ -120,7 +122,8 @@ static void* storagemgr_run(void* buffer) {
 
         sensor_data_t data = sbuffer_remove_last(buffer);
         storagemgr_insert_sensor(db, data.id, data.value, data.ts);
-
+        printf("sensor id = %d - temperature = %g - STORED\n", data.id, data.value);
+                            
         pthread_mutex_unlock (&pthread_mutex);   
     }
 
@@ -145,19 +148,16 @@ int main(int argc, char* argv[]) {
     pthread_t storagemgr_thread;
     ASSERT_ELSE_PERROR(pthread_create(&storagemgr_thread, NULL, storagemgr_run, buffer) == 0);
 
-    pthread_t connmgr_thread;
-    ASSERT_ELSE_PERROR(pthread_create(&connmgr_thread, NULL, connmgr_listen, buffer) == 0);
-
     // main server loop
-    //connmgr_listen(port_number, buffer);
+    connmgr_listen(port_number, buffer, &pthread_mutex, &dataToProcess);
 
     // first, check if all sbuffer data has been processed + sbuffer is empty
     // second, close the buffer
 
     // TODO remove the lock and unlock functions
-    sbuffer_lock(buffer);
+    //sbuffer_lock(buffer);
     sbuffer_close(buffer);
-    sbuffer_unlock(buffer);
+    //sbuffer_unlock(buffer);
 
     pthread_join(datamgr_thread, NULL);
     pthread_join(storagemgr_thread, NULL);

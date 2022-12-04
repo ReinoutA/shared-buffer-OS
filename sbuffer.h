@@ -29,6 +29,8 @@ bool sbuffer_is_empty(sbuffer_t* buffer);
 
 bool sbuffer_is_closed(sbuffer_t* buffer);
 
+bool sbuffer_has_data_to_process(sbuffer_t* buffer);
+
 /*
     Gain/release exclusive access to the buffer
     TODO: these functions should not exist!

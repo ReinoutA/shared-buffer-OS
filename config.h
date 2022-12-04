@@ -22,6 +22,7 @@ typedef struct {
     sensor_id_t id;
     sensor_value_t value;
     sensor_ts_t ts;
+    bool isProcessed;
 } sensor_data_t;
 
 #ifndef TIMEOUT
