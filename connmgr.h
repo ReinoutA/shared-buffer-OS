@@ -19,4 +19,4 @@
     It starts listening on the given port and when when a sensor
     node connects it writes the data to a sensor_data_recv file.
 */
-void connmgr_listen(int port_number, sbuffer_t* buffer, pthread_mutex_t* ppthread_mutex, pthread_cond_t* pConditionToProcess);
+void connmgr_listen(int port_number, sbuffer_t* buffer);

@@ -23,7 +23,6 @@
 #include <wait.h>
 
 static pthread_mutex_t pthread_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t dataToProcess = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t dataToStore = PTHREAD_COND_INITIALIZER;
 
 static int print_usage() {
@@ -31,51 +30,62 @@ static int print_usage() {
     return -1;
 }
 
-/*
-static void* datamgr_run(void* buffer) {
-    datamgr_init();
+// static void* datamgr_run(void* buffer) {
+//     datamgr_init();
 
-    // datamgr loop
-    while (true) {
-        sbuffer_lock(buffer);
+//     // datamgr loop
+//     while (true) {
+//         sbuffer_lock(buffer);
     
-        if (!sbuffer_is_empty(buffer)) {
-            sensor_data_t data = sbuffer_remove_last(buffer);
-            datamgr_process_reading(&data);
-            // everything nice & processed
-        } else if (sbuffer_is_closed(buffer)) {
-            // buffer is both empty & closed: there will never be data again
-            sbuffer_unlock(buffer);
-            break;
-        }
-        // give the others a chance to lock the mutex
-        sbuffer_unlock(buffer);
-    }
+//         if (!sbuffer_is_empty(buffer)) {
+//             sensor_data_t data = sbuffer_remove_last(buffer);
+//             datamgr_process_reading(&data);
+//             // everything nice & processed
+//         } else if (sbuffer_is_closed(buffer)) {
+//             // buffer is both empty & closed: there will never be data again
+//             sbuffer_unlock(buffer);
+//             break;
+//         }
+//         // give the others a chance to lock the mutex
+//         sbuffer_unlock(buffer);
+//     }
 
-    datamgr_free();
+//     datamgr_free();
 
-    return NULL;
-}
-*/
+//     return NULL;
+// }
 
 static void* datamgr_run(void* buffer) {
-    datamgr_init();
+    struct timespec timeRemaining;
+    struct timespec timeRequested= {
+       0,               /* secs (Must be Non-Negative) */ 
+       50 * 1000000     /* nano (Must be in range of 0 to 999999999) */ 
+   };
+   
+   datamgr_init();
 
     // datamgr loop
-    while (true) {
-        pthread_mutex_lock(&pthread_mutex);
-
-        while (!sbuffer_has_data_to_process(buffer))
-            pthread_cond_wait(&dataToProcess, &pthread_mutex);
-
-        sensor_data_t data = sbuffer_get_last(buffer);
-        datamgr_process_reading(&data);
-        printf("sensor id = %d - temperature = %g - PROCESSED\n", data.id, data.value);
+    while (true) {        
+                
+        if (!sbuffer_has_data_to_process(buffer))
+        {
+            // sleep
+            nanosleep(&timeRequested , &timeRemaining);
+        }
+        else
+        {
+            pthread_mutex_lock(&pthread_mutex);
         
+            sensor_data_t data = sbuffer_get_last(buffer);
+            datamgr_process_reading(&data);
+            printf("sensor id = %d - temperature = %g - PROCESSED\n", data.id, data.value);        
 
-        // notify the thread to store the sensor data
-        pthread_cond_signal (&dataToStore);
-        pthread_mutex_unlock (&pthread_mutex);        
+            // notify the thread to store the sensor data
+            pthread_cond_signal (&dataToStore);
+
+            pthread_mutex_unlock (&pthread_mutex);              
+        }        
+        
     }
 
     datamgr_free();
@@ -83,31 +93,29 @@ static void* datamgr_run(void* buffer) {
     return NULL;
 }
 
-/*
-static void* storagemgr_run(void* buffer) {
-    DBCONN* db = storagemgr_init_connection(1);
-    assert(db != NULL);
+// static void* storagemgr_run(void* buffer) {
+//     DBCONN* db = storagemgr_init_connection(1);
+//     assert(db != NULL);
 
-    // storagemgr loop
-    while (true) {
-        sbuffer_lock(buffer);
-        if (!sbuffer_is_empty(buffer)) {
-            sensor_data_t data = sbuffer_remove_last(buffer);
-            storagemgr_insert_sensor(db, data.id, data.value, data.ts);
-            // everything nice & processed
-        } else if (sbuffer_is_closed(buffer)) {
-            // buffer is both empty & closed: there will never be data again
-            sbuffer_unlock(buffer);
-            break;
-        }
-        // give the others a chance to lock the mutex
-        sbuffer_unlock(buffer);
-    }
+//     // storagemgr loop
+//     while (true) {
+//         sbuffer_lock(buffer);
+//         if (!sbuffer_is_empty(buffer)) {
+//             sensor_data_t data = sbuffer_remove_last(buffer);
+//             storagemgr_insert_sensor(db, data.id, data.value, data.ts);
+//             // everything nice & processed
+//         } else if (sbuffer_is_closed(buffer)) {
+//             // buffer is both empty & closed: there will never be data again
+//             sbuffer_unlock(buffer);
+//             break;
+//         }
+//         // give the others a chance to lock the mutex
+//         sbuffer_unlock(buffer);
+//     }
 
-    storagemgr_disconnect(db);
-    return NULL;
-}
-*/
+//     storagemgr_disconnect(db);
+//     return NULL;
+// }
 
 static void* storagemgr_run(void* buffer) {
     DBCONN* db = storagemgr_init_connection(1);
@@ -117,7 +125,7 @@ static void* storagemgr_run(void* buffer) {
     while (true) {
         pthread_mutex_lock(&pthread_mutex);
 
-        while (sbuffer_is_empty(buffer))
+        while (!sbuffer_has_processed_data_to_store(buffer))
             pthread_cond_wait(&dataToStore, &pthread_mutex);
 
         sensor_data_t data = sbuffer_remove_last(buffer);
@@ -149,7 +157,7 @@ int main(int argc, char* argv[]) {
     ASSERT_ELSE_PERROR(pthread_create(&storagemgr_thread, NULL, storagemgr_run, buffer) == 0);
 
     // main server loop
-    connmgr_listen(port_number, buffer, &pthread_mutex, &dataToProcess);
+    connmgr_listen(port_number, buffer);
 
     // first, check if all sbuffer data has been processed + sbuffer is empty
     // second, close the buffer

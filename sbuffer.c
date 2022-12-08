@@ -85,6 +85,21 @@ bool sbuffer_is_closed(sbuffer_t* buffer) {
     return isClosed;
 }
 
+bool sbuffer_has_processed_data_to_store(sbuffer_t* buffer) {
+    bool hasDataToStore = false;
+    ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
+    assert(buffer);
+    
+    // make sure the buffer is not empty
+    if (buffer->tail != NULL)
+    {
+        hasDataToStore = buffer->tail->data.isProcessed;
+    }
+    
+    ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
+    return hasDataToStore;
+}
+
 bool sbuffer_has_data_to_process(sbuffer_t* buffer) {
     bool hasDataToProcess = false;
     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);

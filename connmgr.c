@@ -19,7 +19,7 @@
 #include <pthread.h>
 #include <wait.h>
 
-void connmgr_listen(int port_number, sbuffer_t* buffer, pthread_mutex_t* ppthread_mutex, pthread_cond_t* pConditionToProcess) {
+void connmgr_listen(int port_number, sbuffer_t* buffer) {
 
 #if DEBUG
     const int fd =
@@ -99,14 +99,9 @@ void connmgr_listen(int port_number, sbuffer_t* buffer, pthread_mutex_t* ppthrea
                             printf("sensor id = %" PRIu16 " - temperature = %g - timestamp = %ld\n", data.id, data.value, data.ts);
                             
                             //sbuffer_lock(buffer);
-                            pthread_mutex_lock (ppthread_mutex);
+
                             int ret = sbuffer_insert_first(buffer, &data);
                             assert(ret == SBUFFER_SUCCESS);
-        
-                            // notify the thread to store the sensor data
-                            pthread_cond_signal (pConditionToProcess);                                    
-
-                            pthread_mutex_unlock (ppthread_mutex); 
 
                             //sbuffer_unlock(buffer);
                         } else if (result == TCP_CONNECTION_CLOSED) {
