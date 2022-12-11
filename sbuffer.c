@@ -59,16 +59,6 @@ void sbuffer_destroy(sbuffer_t* buffer) {
     free(buffer);
 }
 
-// void sbuffer_lock(sbuffer_t* buffer) {
-//     assert(buffer);
-//     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
-// }
-
-// void sbuffer_unlock(sbuffer_t* buffer) {
-//     assert(buffer);
-//     ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
-// }
-
 bool sbuffer_is_empty(sbuffer_t* buffer) {
     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
     assert(buffer);
@@ -86,9 +76,9 @@ bool sbuffer_is_closed(sbuffer_t* buffer) {
 }
 
 bool sbuffer_has_processed_data_to_store(sbuffer_t* buffer) {
-    bool hasDataToStore = false;
     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
     assert(buffer);
+    bool hasDataToStore = false;
     
     // make sure the buffer is not empty
     if (buffer->tail != NULL)
@@ -100,10 +90,10 @@ bool sbuffer_has_processed_data_to_store(sbuffer_t* buffer) {
     return hasDataToStore;
 }
 
-bool sbuffer_has_data_to_process(sbuffer_t* buffer) {
-    bool hasDataToProcess = false;
+bool sbuffer_has_data_to_process(sbuffer_t* buffer) {    
     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
     assert(buffer);
+    bool hasDataToProcess = false;
     
     // make sure the buffer is not empty
     if (buffer->tail != NULL)
@@ -121,7 +111,7 @@ int sbuffer_insert_first(sbuffer_t* buffer, sensor_data_t const* data) {
     assert(buffer && data);
     if (buffer->closed)
         return SBUFFER_FAILURE;
-
+    
     // create new node
     sbuffer_node_t* node = create_node(data);
     assert(node->prev == NULL);

@@ -57,8 +57,8 @@ static int print_usage() {
 
 static void* datamgr_run(void* buffer) {
     struct timespec timeRemaining;
-    struct timespec timeRequested= {
-       0,               /* secs (Must be Non-Negative) */ 
+    struct timespec timeRequested = {
+        0,               /* secs (Must be Non-Negative) */ 
        50 * 1000000     /* nano (Must be in range of 0 to 999999999) */ 
    };
    
@@ -69,8 +69,10 @@ static void* datamgr_run(void* buffer) {
                 
         if (!sbuffer_has_data_to_process(buffer))
         {
+            printf("nothing to process, sleep\n");
             // sleep
             nanosleep(&timeRequested , &timeRemaining);
+            //sleep(1);                            
         }
         else
         {
@@ -160,12 +162,14 @@ int main(int argc, char* argv[]) {
     connmgr_listen(port_number, buffer);
 
     // first, check if all sbuffer data has been processed + sbuffer is empty
-    // second, close the buffer
+    while (!sbuffer_is_empty(buffer))
+    {
+        printf("connmgr_listen finished. Processing the remaining data\n");
+        sleep(1);
+    }
 
-    // TODO remove the lock and unlock functions
-    //sbuffer_lock(buffer);
+    // second, close the buffer
     sbuffer_close(buffer);
-    //sbuffer_unlock(buffer);
 
     pthread_join(datamgr_thread, NULL);
     pthread_join(storagemgr_thread, NULL);
