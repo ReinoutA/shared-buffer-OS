@@ -23,7 +23,16 @@
 #include <wait.h>
 
 static pthread_mutex_t pthread_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t dataToStore = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t newData = PTHREAD_COND_INITIALIZER;
+static struct timespec timeRemaining;
+static struct timespec timeRequested50ms = {
+        0,               /* secs (Must be Non-Negative) */ 
+       50 * 1000000     /* nano (Must be in range of 0 to 999999999) */ 
+   };
+static struct timespec timeRequested500ms = {
+        0,               /* secs (Must be Non-Negative) */ 
+       500 * 1000000     /* nano (Must be in range of 0 to 999999999) */ 
+   };
 
 static int print_usage() {
     printf("Usage: <command> <port number> \n");
@@ -55,39 +64,28 @@ static int print_usage() {
 //     return NULL;
 // }
 
-static void* datamgr_run(void* buffer) {
-    struct timespec timeRemaining;
-    struct timespec timeRequested = {
-        0,               /* secs (Must be Non-Negative) */ 
-       50 * 1000000     /* nano (Must be in range of 0 to 999999999) */ 
-   };
-   
+static void* datamgr_run(void* buffer) {  
    datamgr_init();
 
     // datamgr loop
     while (true) {        
-                
-        if (!sbuffer_has_data_to_process(buffer))
+        pthread_mutex_lock(&pthread_mutex);
+
+        while (!sbuffer_has_data_to_process(buffer))
         {
-            printf("nothing to process, sleep\n");
+            printf("nothing to process, wait\n");
             // sleep
-            nanosleep(&timeRequested , &timeRemaining);
-            //sleep(1);                            
+            //nanosleep(&timeRequested500ms , &timeRemaining);
+            //sleep(1);
+            pthread_cond_wait(&newData, &pthread_mutex);
+            printf("stop waiting to process\n");
         }
-        else
-        {
-            pthread_mutex_lock(&pthread_mutex);
-        
-            sensor_data_t data = sbuffer_get_last(buffer);
-            datamgr_process_reading(&data);
-            printf("sensor id = %d - temperature = %g - PROCESSED\n", data.id, data.value);        
 
-            // notify the thread to store the sensor data
-            pthread_cond_signal (&dataToStore);
+        sensor_data_t data = sbuffer_get_last_to_process(buffer);
+        datamgr_process_reading(&data);
+        printf("sensor id = %d - temperature = %g - PROCESSED\n", data.id, data.value);        
 
-            pthread_mutex_unlock (&pthread_mutex);              
-        }        
-        
+        pthread_mutex_unlock (&pthread_mutex);
     }
 
     datamgr_free();
@@ -127,14 +125,21 @@ static void* storagemgr_run(void* buffer) {
     while (true) {
         pthread_mutex_lock(&pthread_mutex);
 
-        while (!sbuffer_has_processed_data_to_store(buffer))
-            pthread_cond_wait(&dataToStore, &pthread_mutex);
-
-        sensor_data_t data = sbuffer_remove_last(buffer);
+        while (!sbuffer_has_data_to_store(buffer))
+        {
+            printf("nothing to store, wait\n");
+            // sleep
+            //nanosleep(&timeRequested500ms , &timeRemaining);
+            //sleep(1);
+            pthread_cond_wait(&newData, &pthread_mutex);
+            printf("stop waiting to store\n");
+        }
+        
+        sensor_data_t data = sbuffer_get_last_to_store(buffer);
         storagemgr_insert_sensor(db, data.id, data.value, data.ts);
         printf("sensor id = %d - temperature = %g - STORED\n", data.id, data.value);
-                            
-        pthread_mutex_unlock (&pthread_mutex);   
+
+        pthread_mutex_unlock (&pthread_mutex);
     }
 
     storagemgr_disconnect(db);
@@ -159,7 +164,7 @@ int main(int argc, char* argv[]) {
     ASSERT_ELSE_PERROR(pthread_create(&storagemgr_thread, NULL, storagemgr_run, buffer) == 0);
 
     // main server loop
-    connmgr_listen(port_number, buffer);
+    connmgr_listen(port_number, buffer, &newData, &pthread_mutex);
 
     // first, check if all sbuffer data has been processed + sbuffer is empty
     while (!sbuffer_is_empty(buffer))
