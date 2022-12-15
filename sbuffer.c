@@ -171,6 +171,7 @@ sensor_data_t sbuffer_get_last(sbuffer_t* buffer) {
 */
 
 sensor_data_t sbuffer_get_last_to_process(sbuffer_t* buffer) {
+    sbuffer_node_t* remove_node = NULL;
     ASSERT_ELSE_PERROR(pthread_rwlock_wrlock(&buffer->rwlock) == 0);
     
     assert(buffer);
@@ -181,18 +182,37 @@ sensor_data_t sbuffer_get_last_to_process(sbuffer_t* buffer) {
     sensor_data_t ret = buffer->toProcess->data;
     
     printf("id to process: %d\n", buffer->toProcess->id);
-
+    
     // indicate the node as processed
     buffer->toProcess->isProcessed = true;
 
+    // check if this node was already stored,
+    // and remove it, if needed
+    if (buffer->toProcess->isStored == true)
+    {        
+        remove_node = buffer->toProcess;
+    }
+
     // move the 'toProcess' pointer
     buffer->toProcess = buffer->toProcess->prev;
-    
+       
+    if(remove_node != NULL)
+    {
+        if (remove_node == buffer->head) {
+            buffer->head = NULL;
+            assert(remove_node == buffer->tail);
+        }
+        buffer->tail = remove_node->prev;
+        printf("sensor id = %d - temperature = %g - WILL BE REMOVED\n", remove_node->id, remove_node->data.value);    
+        free(remove_node);
+    }
     ASSERT_ELSE_PERROR(pthread_rwlock_unlock(&buffer->rwlock) == 0);
+    
     return ret;
 }
 
 sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
+    sbuffer_node_t* remove_node = NULL;
     ASSERT_ELSE_PERROR(pthread_rwlock_wrlock(&buffer->rwlock) == 0);
     
     assert(buffer);
@@ -202,15 +222,33 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
     
     sensor_data_t ret = buffer->toStore->data;
     
-    printf("id to store: %d\n", buffer->toStore->id);
-
-    // indicate the node as stored
-    buffer->toStore->isStored = true;
+    printf("id to store: %d\n", buffer->toStore->id);    
     
+    // indicate this node as stored
+    buffer->toStore->isStored = true;
+
+    // check if this node was already processed,
+    // and remove it, if needed
+    if (buffer->toStore->isProcessed == true)
+    {        
+        remove_node = buffer->toStore;
+    }
+
     // move the 'toStore' pointer
     buffer->toStore = buffer->toStore->prev;
-    
+
+    if(remove_node != NULL)
+    {
+        if (remove_node == buffer->head) {
+            buffer->head = NULL;
+            assert(remove_node == buffer->tail);
+        }
+        buffer->tail = remove_node->prev;
+        printf("sensor id = %d - temperature = %g - WILL BE REMOVED\n", remove_node->id, remove_node->data.value);    
+        free(remove_node);
+    }
     ASSERT_ELSE_PERROR(pthread_rwlock_unlock(&buffer->rwlock) == 0);
+    
     return ret;
 }
 
