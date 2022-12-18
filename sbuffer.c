@@ -142,7 +142,7 @@ bool sbuffer_has_data_to_store(sbuffer_t* buffer) {
         printf("nothing to store, wait\n");
         ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->newDataAvailable, &buffer->mutex) == 0);
         printf("stop waiting to store\n");
-        hasDataToStore = buffer->toStore != NULL;
+        //hasDataToStore = buffer->toStore != NULL;
     }
     ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
 
@@ -179,7 +179,7 @@ bool sbuffer_has_data_to_process(sbuffer_t* buffer) {
         printf("nothing to process, wait\n");
         ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->newDataAvailable, &buffer->mutex) == 0);
         printf("stop waiting to process\n");
-        hasDataToProcess = buffer->toProcess != NULL;
+        //hasDataToProcess = buffer->toProcess != NULL;
     }
     ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
     return hasDataToProcess;
@@ -222,32 +222,7 @@ int sbuffer_insert_first(sbuffer_t* buffer, sensor_data_t const* data) {
 
 // -------------------------------- REMOVING ---------------------------------------
 
-/*
-sensor_data_t sbuffer_remove_last(sbuffer_t* buffer) {
-    ASSERT_ELSE_PERROR(pthread_rwlock_wrlock(&buffer->rwlock) == 0);
-
-    assert(buffer);
-    assert(buffer->head != NULL);
-
-    sbuffer_node_t* removed_node = buffer->tail;
-    assert(removed_node != NULL);
-
-    
-    if (removed_node == buffer->head) {
-        buffer->head = NULL;
-        assert(removed_node == buffer->tail);
-    }
-    buffer->tail = removed_node->prev;
-    sensor_data_t ret = removed_node->data;
-    node_destroy(removed_node);
-    
-
-    ASSERT_ELSE_PERROR(pthread_rwlock_unlock(&buffer->rwlock) == 0);
-    return ret;
-}
-*/
 void sbuffer_remove_node(sbuffer_t* buffer, sbuffer_node_t* remove_node){
-    ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);    // VERWIJDER DIT
     if (remove_node == buffer->head) {
         buffer->head = NULL;
         assert(remove_node == buffer->tail);
@@ -255,11 +230,11 @@ void sbuffer_remove_node(sbuffer_t* buffer, sbuffer_node_t* remove_node){
     buffer->tail = remove_node->prev;
     printf("sensor id = %d - temperature = %g - WILL BE REMOVED\n", remove_node->id, remove_node->data.value);        
     node_destroy(remove_node);  
-    ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);    // VERWIJDER DIT
 }
 
 // ---------------------------------- GETTERS -----------------------------------------
 
+/*
 
 sensor_data_t sbuffer_get_last_to_process(sbuffer_t* buffer) {
     
@@ -343,11 +318,11 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
     
     return ret;
 }
-
+*/
 
 // ------------------------------ OLD GETTERS THAT LOCK ON THE WHOLE BUFFER -----------------------------------------------
 
-/*
+
 
 sensor_data_t sbuffer_get_last_to_process(sbuffer_t* buffer) {
     sbuffer_node_t* remove_node = NULL;
@@ -433,4 +408,3 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
 
     return ret;
 }
-*/
