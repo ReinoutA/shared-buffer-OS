@@ -14,7 +14,7 @@
 #define SBUFFER_SUCCESS 0
 
 typedef struct sbuffer sbuffer_t;
-
+typedef struct sbuffer_node sbuffer_node_t;
 /**
  * Allocate and initialize a new shared buffer
  */
@@ -33,6 +33,7 @@ bool sbuffer_has_data_to_process(sbuffer_t* buffer);
 
 bool sbuffer_has_data_to_store(sbuffer_t* buffer);
 
+void sbuffer_remove_node(sbuffer_t* buffer, sbuffer_node_t* remove_node);
 /*
     Gain/release exclusive access to the buffer
     TODO: these functions should not exist!

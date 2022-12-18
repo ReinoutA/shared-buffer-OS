@@ -4,14 +4,14 @@ cmake_minimum_required(VERSION 3.4.3)
 
 set(COMMON_FLAGS -O2 -Wall -Wextra -ggdb)
 
-add_compile_options(-fsanitize=address)
-add_link_options(-fsanitize=address)
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
 
-# add_compile_options(-fsanitize=thread)
-# add_link_options(-fsanitize=thread)
+add_compile_options(-fsanitize=thread)
+add_link_options(-fsanitize=thread)
 
-# add_compile_options(-fsanitize=undefined)
-# add_link_options(-fsanitize=undefined)
+#add_compile_options(-fsanitize=undefined)
+#add_link_options(-fsanitize=undefined)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

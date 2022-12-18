@@ -19,7 +19,7 @@
 #include <pthread.h>
 #include <wait.h>
 
-void connmgr_listen(int port_number, sbuffer_t* buffer, pthread_cond_t* newData, pthread_mutex_t* pthread_mutex) {
+void connmgr_listen(int port_number, sbuffer_t* buffer) {
 
 #if DEBUG
     const int fd =
@@ -105,9 +105,9 @@ void connmgr_listen(int port_number, sbuffer_t* buffer, pthread_cond_t* newData,
 
                             int ret = sbuffer_insert_first(buffer, &data);
                             assert(ret == SBUFFER_SUCCESS);
-                            pthread_mutex_lock(pthread_mutex);
-                            pthread_cond_broadcast(newData);
-                            pthread_mutex_unlock(pthread_mutex);
+                            //pthread_mutex_lock(pthread_mutex);
+                            //pthread_cond_broadcast(newData);
+                            //pthread_mutex_unlock(pthread_mutex);
 
                         } else if (result == TCP_CONNECTION_CLOSED) {
                             printf("Sensor with id %" PRIu16 " disconnected\n", *tcp_last_seen_sensor_id(socket));
