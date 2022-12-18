@@ -17,14 +17,14 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
-typedef struct sbuffer_node {
+struct sbuffer_node {
     struct sbuffer_node* prev;
     sensor_data_t data;
     int id;
     bool isProcessed;
     bool isStored;
     pthread_mutex_t mutex;
-} sbuffer_node_t;
+};
 
 struct sbuffer {
     sbuffer_node_t* head;
@@ -218,19 +218,21 @@ int sbuffer_insert_first(sbuffer_t* buffer, sensor_data_t const* data) {
     ASSERT_ELSE_PERROR(pthread_cond_broadcast(&buffer->newDataAvailable) == 0); // Wake up all waiting readers
     return SBUFFER_SUCCESS;
 }
-
-
 // -------------------------------- REMOVING ---------------------------------------
 
-void sbuffer_remove_node(sbuffer_t* buffer, sbuffer_node_t* remove_node){
+void sbuffer_remove_node(sbuffer_t* buffer, sbuffer_node_t* remove_node)
+{
     if (remove_node == buffer->head) {
         buffer->head = NULL;
         assert(remove_node == buffer->tail);
     }
     buffer->tail = remove_node->prev;
     printf("sensor id = %d - temperature = %g - WILL BE REMOVED\n", remove_node->id, remove_node->data.value);        
-    node_destroy(remove_node);  
+    node_destroy(remove_node);    
 }
+
+
+
 
 // ---------------------------------- GETTERS -----------------------------------------
 
@@ -354,18 +356,13 @@ sensor_data_t sbuffer_get_last_to_process(sbuffer_t* buffer) {
 
     if(remove_node != NULL)
     {
-        if (remove_node == buffer->head) {
-            buffer->head = NULL;
-            assert(remove_node == buffer->tail);
-        }
-        buffer->tail = remove_node->prev;
-        printf("sensor id = %d - temperature = %g - WILL BE REMOVED\n", remove_node->id, remove_node->data.value);    
-        free(remove_node);
+       sbuffer_remove_node(buffer, remove_node);
     }
     ASSERT_ELSE_PERROR(pthread_rwlock_unlock(&buffer->rwlock) == 0);
 
     return ret;
 }
+
 
 sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
     sbuffer_node_t* remove_node = NULL;
@@ -396,13 +393,7 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
 
     if(remove_node != NULL)
     {
-        if (remove_node == buffer->head) {
-            buffer->head = NULL;
-            assert(remove_node == buffer->tail);
-        }
-        buffer->tail = remove_node->prev;
-        printf("sensor id = %d - temperature = %g - WILL BE REMOVED\n", remove_node->id, remove_node->data.value);    
-        free(remove_node);
+       sbuffer_remove_node(buffer, remove_node);
     }
     ASSERT_ELSE_PERROR(pthread_rwlock_unlock(&buffer->rwlock) == 0);
 
