@@ -320,7 +320,7 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
 }
 */
 
-// ------------------------------ OLD GETTERS THAT LOCK ON THE WHOLE BUFFER -----------------------------------------------
+// ------------------------------ GETTERS THAT LOCK ON BUFFER -----------------------------------------------
 
 
 
