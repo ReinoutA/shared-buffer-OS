@@ -34,7 +34,9 @@ bool sbuffer_has_data_to_process(sbuffer_t* buffer);
 
 bool sbuffer_has_data_to_store(sbuffer_t* buffer);
 
-void sbuffer_remove_node(sbuffer_t* buffer, sbuffer_node_t* remove_node);
+//void sbuffer_remove_node(sbuffer_t* buffer, sbuffer_node_t* remove_node);
+void sbuffer_remove_node(sbuffer_t* buffer);
+
 /*
     Gain/release exclusive access to the buffer
     TODO: these functions should not exist!
@@ -76,8 +78,6 @@ sensor_data_t sbuffer_get_last_to_process(sbuffer_t* buffer);
  * \return the last measurement
  */
 sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer);
-
-void sbuffer_remove_node(sbuffer_t* buffer, sbuffer_node_t* remove_node);
 
 /**
  * Closes the buffer. This signifies that no more data will be inserted.

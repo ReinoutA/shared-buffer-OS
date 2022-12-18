@@ -38,7 +38,6 @@ static int print_usage() {
     return -1;
 }
 
-
 static void* datamgr_run(void* buffer) {  
    datamgr_init();
 
@@ -57,8 +56,6 @@ static void* datamgr_run(void* buffer) {
 
     return NULL;
 }
-
-
 
 static void* storagemgr_run(void* buffer) {
     DBCONN* db = storagemgr_init_connection(1);
