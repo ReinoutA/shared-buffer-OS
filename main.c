@@ -76,6 +76,18 @@ static void* storagemgr_run(void* buffer) {
     return NULL;
 }
 
+static void* removemgr_run(void* buffer) {  
+    // removemgr loop
+    while (true) {        
+        // removemgr waits on CV when no data is available to process
+        if(sbuffer_has_data_to_remove(buffer)){
+            sbuffer_remove_node(buffer);
+        }
+    }
+    
+    return NULL;
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 2)
         return print_usage();
@@ -92,6 +104,9 @@ int main(int argc, char* argv[]) {
 
     pthread_t storagemgr_thread;
     ASSERT_ELSE_PERROR(pthread_create(&storagemgr_thread, NULL, storagemgr_run, buffer) == 0);
+
+    pthread_t removemgr_thread;
+    ASSERT_ELSE_PERROR(pthread_create(&removemgr_thread, NULL, removemgr_run, buffer) == 0);
 
     // main server loop
     connmgr_listen(port_number, buffer);

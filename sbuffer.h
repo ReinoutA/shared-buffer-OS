@@ -83,3 +83,4 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer);
  * Closes the buffer. This signifies that no more data will be inserted.
  */
 void sbuffer_close(sbuffer_t* buffer);
+bool sbuffer_has_data_to_remove(sbuffer_t* buffer);
