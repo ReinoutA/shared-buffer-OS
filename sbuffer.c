@@ -229,9 +229,7 @@ sensor_data_t sbuffer_get_last_to_process(sbuffer_t* buffer) {
 
     // check if this node was already stored,
     // and remove it, if needed
-    if (buffer->toProcess->isStored == true){
-        removeNode = true;
-    }
+    removeNode = buffer->toProcess->isStored;
     
     // move the 'toProcess' pointer
     buffer->toProcess = previous_node;
@@ -264,9 +262,7 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
 
     // check if this node was already processed,
     // and remove it, if needed
-    if (buffer->toStore->isProcessed == true){
-        removeNode = true;
-    }
+    removeNode = buffer->toStore->isProcessed;
       
     // move the 'toStore' pointer
     buffer->toStore = previous_node;
