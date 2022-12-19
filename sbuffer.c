@@ -23,7 +23,6 @@ struct sbuffer_node {
     int id;
     bool isProcessed;
     bool isStored;
-    pthread_mutex_t mutex;
 };
 
 struct sbuffer {
@@ -53,7 +52,6 @@ static sbuffer_node_t* create_node(const sensor_data_t* data) {
         .isProcessed = false,
         .isStored = false,
     };
-    ASSERT_ELSE_PERROR(pthread_mutex_init(&node->mutex, NULL) == 0);
     return node;
 }
 
@@ -72,7 +70,7 @@ sbuffer_t* sbuffer_create() {
     ASSERT_ELSE_PERROR(pthread_cond_init(&buffer->new_Data_Available_High_Priority, NULL) == 0);
     ASSERT_ELSE_PERROR(pthread_cond_init(&buffer->dataToRemove, NULL) == 0);
     ASSERT_ELSE_PERROR(pthread_mutex_init(&buffer->mutex, NULL) == 0);
-
+ 
     return buffer;
 }
 
@@ -101,7 +99,6 @@ void sbuffer_destroy(sbuffer_t* buffer) {
 
 void node_destroy(sbuffer_node_t* node) {
     assert(node);    
-    ASSERT_ELSE_PERROR(pthread_mutex_destroy(&node->mutex) == 0);
     free(node);
 }
 
