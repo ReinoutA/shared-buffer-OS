@@ -1,7 +1,3 @@
-/**
- * \author Mathieu Erbas
- */
-
 #ifndef _GNU_SOURCE
     #define _GNU_SOURCE
 #endif
@@ -63,7 +59,7 @@ static void* storagemgr_run(void* buffer) {
 
     // storagemgr loop
     while (true) {
-       // storagemgr waits on CV when no data is available to process
+       // storagemgr waits on CV when no data is available to store
        if(sbuffer_has_data_to_store(buffer)){
             sensor_data_t data = sbuffer_get_last_to_store(buffer);
             storagemgr_insert_sensor(db, data.id, data.value, data.ts);
@@ -100,12 +96,11 @@ int main(int argc, char* argv[]) {
     sbuffer_t* buffer = sbuffer_create();
 
     pthread_t datamgr_thread;
-    ASSERT_ELSE_PERROR(pthread_create(&datamgr_thread, NULL, datamgr_run, buffer) == 0);
-
     pthread_t storagemgr_thread;
-    ASSERT_ELSE_PERROR(pthread_create(&storagemgr_thread, NULL, storagemgr_run, buffer) == 0);
-
     pthread_t removemgr_thread;
+
+    ASSERT_ELSE_PERROR(pthread_create(&datamgr_thread, NULL, datamgr_run, buffer) == 0);
+    ASSERT_ELSE_PERROR(pthread_create(&storagemgr_thread, NULL, storagemgr_run, buffer) == 0);
     ASSERT_ELSE_PERROR(pthread_create(&removemgr_thread, NULL, removemgr_run, buffer) == 0);
 
     // main server loop
@@ -121,7 +116,6 @@ int main(int argc, char* argv[]) {
     // second, close the buffer
     sbuffer_close(buffer);
 
- 
     pthread_join(storagemgr_thread, NULL);
     pthread_join(datamgr_thread, NULL);
 
