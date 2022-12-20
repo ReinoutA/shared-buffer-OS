@@ -104,7 +104,8 @@ void node_destroy(sbuffer_node_t* node) {
 
 // ------------------------------- PREDICATES -----------------------------------------
 bool sbuffer_is_empty(sbuffer_t* buffer) {
-    ASSERT_ELSE_PERROR(pthread_rwlock_rdlock(&buffer->rwlock) == 0);
+    // use write lock instead of read lock to avoid data race condition
+    ASSERT_ELSE_PERROR(pthread_rwlock_wrlock(&buffer->rwlock) == 0);
     assert(buffer);
     bool isEmpty = buffer->head == NULL;
     ASSERT_ELSE_PERROR(pthread_rwlock_unlock(&buffer->rwlock) == 0);
@@ -120,14 +121,21 @@ bool sbuffer_is_closed(sbuffer_t* buffer) {
 }
 
 bool sbuffer_has_data_to_store(sbuffer_t* buffer) {
+    // create a time value, 10 seconds from now
+    struct timespec timeValue;
+    clock_gettime(CLOCK_REALTIME, &timeValue);
+    timeValue.tv_sec += 10;
+
     assert(buffer);
     bool hasDataToStore = false;
     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
     hasDataToStore = buffer->toStore != NULL;
     if (!hasDataToStore) {
         printf("nothing to store, wait\n");
-        ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->new_Data_Available_Low_Priority, &buffer->mutex) == 0);
-        printf("stop waiting to store\n");
+        //ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->new_Data_Available_Low_Priority, &buffer->mutex) == 0);
+        int errorValue = pthread_cond_timedwait(&buffer->new_Data_Available_Low_Priority, &buffer->mutex, &timeValue);
+        ASSERT_ELSE_PERROR((errorValue == 0) || (errorValue == ETIMEDOUT));
+        printf("check data to store\n");
         hasDataToStore = buffer->toStore != NULL;
     }
     ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
@@ -135,15 +143,22 @@ bool sbuffer_has_data_to_store(sbuffer_t* buffer) {
     return hasDataToStore; 
 }
 
-bool sbuffer_has_data_to_process(sbuffer_t* buffer) {   
+bool sbuffer_has_data_to_process(sbuffer_t* buffer) {
+    // create a time value, 10 seconds from now
+    struct timespec timeValue;
+    clock_gettime(CLOCK_REALTIME, &timeValue);
+    timeValue.tv_sec += 10;
+
     assert(buffer);
     bool hasDataToProcess = false;
     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
     hasDataToProcess = buffer->toProcess != NULL;
     if (!hasDataToProcess) {
         printf("nothing to process, wait\n");
-        ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->new_Data_Available_High_Priority, &buffer->mutex) == 0);
-        printf("stop waiting to process\n");
+        //ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->new_Data_Available_High_Priority, &buffer->mutex) == 0);
+        int errorValue = pthread_cond_timedwait(&buffer->new_Data_Available_High_Priority, &buffer->mutex, &timeValue);
+        ASSERT_ELSE_PERROR((errorValue == 0) || (errorValue == ETIMEDOUT));
+        printf("check data to process\n");
         hasDataToProcess = buffer->toProcess != NULL;
     }
     ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
@@ -278,14 +293,21 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
 
 bool sbuffer_has_data_to_remove(sbuffer_t* buffer)
 {
+    // create a time value, 10 seconds from now
+    struct timespec timeValue;
+    clock_gettime(CLOCK_REALTIME, &timeValue);
+    timeValue.tv_sec += 10;
+
     assert(buffer);
     bool hasDataToRemove = false;
     ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
     hasDataToRemove = (buffer->tail != NULL) && buffer->tail->isProcessed && buffer->tail->isStored;
     if (!hasDataToRemove) {
         printf("nothing to remove, wait\n");
-        ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->dataToRemove, &buffer->mutex) == 0);
-        printf("stop waiting to remove\n");
+        //ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->dataToRemove, &buffer->mutex) == 0);
+        int errorValue = pthread_cond_timedwait(&buffer->dataToRemove, &buffer->mutex, &timeValue);
+        ASSERT_ELSE_PERROR((errorValue == 0) || (errorValue == ETIMEDOUT));
+        printf("check data to remove\n");
         hasDataToRemove = (buffer->tail != NULL) && buffer->tail->isProcessed && buffer->tail->isStored;
     }
     ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);

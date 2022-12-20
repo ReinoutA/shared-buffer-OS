@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <wait.h>
 
-
+static int threadCanRun = 0;
 static struct timespec timeRemaining;
 static struct timespec timeRequested50ms = {
         0,               /* secs (Must be Non-Negative) */ 
@@ -33,12 +33,26 @@ static int print_usage() {
     printf("Usage: <command> <port number> \n");
     return -1;
 }
+static pthread_mutex_t threadCanRunMutex;
+
+static int getThreadCanRun(void) {
+    pthread_mutex_lock(&threadCanRunMutex);
+    int retValue = threadCanRun;
+    pthread_mutex_unlock(&threadCanRunMutex);
+    return retValue;
+}
+
+static void setThreadCanRun(int canRun) {
+  pthread_mutex_lock(&threadCanRunMutex);
+  threadCanRun = canRun;
+  pthread_mutex_unlock(&threadCanRunMutex);
+}
 
 static void* datamgr_run(void* buffer) {  
    datamgr_init();
 
     // datamgr loop
-    while (true) {        
+    while (getThreadCanRun()) {        
         // datamgr waits on CV when no data is available to process
         if(sbuffer_has_data_to_process(buffer)){
             sensor_data_t data = sbuffer_get_last_to_process(buffer);
@@ -47,9 +61,10 @@ static void* datamgr_run(void* buffer) {
             //nanosleep(&timeRequested500ms, &timeRemaining);
         }
     }
-
+    
     datamgr_free();
 
+    printf("shutdown datamgr_run thread\n");
     return NULL;
 }
 
@@ -58,7 +73,7 @@ static void* storagemgr_run(void* buffer) {
     assert(db != NULL);
 
     // storagemgr loop
-    while (true) {
+    while (getThreadCanRun()) {
        // storagemgr waits on CV when no data is available to store
        if(sbuffer_has_data_to_store(buffer)){
             sensor_data_t data = sbuffer_get_last_to_store(buffer);
@@ -69,18 +84,21 @@ static void* storagemgr_run(void* buffer) {
     }
 
     storagemgr_disconnect(db);
+
+    printf("shutdown storagemgr_run thread\n");
     return NULL;
 }
 
 static void* removemgr_run(void* buffer) {  
     // removemgr loop
-    while (true) {        
+    while (getThreadCanRun()) {        
         // removemgr waits on CV when no data is available to process
         if(sbuffer_has_data_to_remove(buffer)){
             sbuffer_remove_node(buffer);
         }
     }
     
+    printf("shutdown removemgr_run thread\n");
     return NULL;
 }
 
@@ -94,6 +112,10 @@ int main(int argc, char* argv[]) {
         return print_usage();
 
     sbuffer_t* buffer = sbuffer_create();
+    
+    // set flag to indicate threads can run
+    ASSERT_ELSE_PERROR(pthread_mutex_init(&threadCanRunMutex, NULL) == 0);
+    setThreadCanRun(1);
 
     pthread_t datamgr_thread;
     pthread_t storagemgr_thread;
@@ -113,13 +135,22 @@ int main(int argc, char* argv[]) {
         sleep(1);
     }
 
-    // second, close the buffer
-    sbuffer_close(buffer);
+    // stop all threads
+    setThreadCanRun(0);
+    printf("All sensor values have been handled, buffer is empty. All threads can stop running.\n");
 
+    // second, close the buffer
+    printf("Close the buffer\n");
+    sbuffer_close(buffer);    
+
+    printf("Cleanup threads\n");
     pthread_join(storagemgr_thread, NULL);
     pthread_join(datamgr_thread, NULL);
+    pthread_join(removemgr_thread, NULL);
 
+    printf("Destroy the buffer\n");
     sbuffer_destroy(buffer);
+    ASSERT_ELSE_PERROR(pthread_mutex_destroy(&threadCanRunMutex) == 0);
 
     wait(NULL);
 

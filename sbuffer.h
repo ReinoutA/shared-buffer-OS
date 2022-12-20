@@ -9,6 +9,7 @@
 #endif
 
 #include "config.h"
+#include <errno.h>
 
 #define SBUFFER_FAILURE -1
 #define SBUFFER_SUCCESS 0
