@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <wait.h>
 
-static int threadCanRun = 0;
+static bool threadCanRun = false;
 static struct timespec timeRemaining;
 static struct timespec timeRequested50ms = {
         0,               /* secs (Must be Non-Negative) */ 
@@ -35,14 +35,14 @@ static int print_usage() {
 }
 static pthread_mutex_t threadCanRunMutex;
 
-static int getThreadCanRun(void) {
+static bool getThreadCanRun(void) {
     pthread_mutex_lock(&threadCanRunMutex);
-    int retValue = threadCanRun;
+    bool retValue = threadCanRun;
     pthread_mutex_unlock(&threadCanRunMutex);
     return retValue;
 }
 
-static void setThreadCanRun(int canRun) {
+static void setThreadCanRun(bool canRun) {
   pthread_mutex_lock(&threadCanRunMutex);
   threadCanRun = canRun;
   pthread_mutex_unlock(&threadCanRunMutex);
@@ -136,14 +136,14 @@ int main(int argc, char* argv[]) {
     }
 
     // stop all threads
-    setThreadCanRun(0);
+    setThreadCanRun(false);
     printf("All sensor values have been handled, buffer is empty. All threads can stop running.\n");
 
     // second, close the buffer
     printf("Close the buffer\n");
     sbuffer_close(buffer);    
 
-    printf("Cleanup threads\n");
+    printf("Shutdown threads within 10 seconds ...\n");
     pthread_join(storagemgr_thread, NULL);
     pthread_join(datamgr_thread, NULL);
     pthread_join(removemgr_thread, NULL);
