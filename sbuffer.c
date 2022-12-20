@@ -104,11 +104,11 @@ void node_destroy(sbuffer_node_t* node) {
 
 // ------------------------------- PREDICATES -----------------------------------------
 bool sbuffer_is_empty(sbuffer_t* buffer) {
-    // use write lock instead of read lock to avoid data race condition
-    ASSERT_ELSE_PERROR(pthread_rwlock_wrlock(&buffer->rwlock) == 0);
+    // use mutex instead of read lock to avoid data race condition
+    ASSERT_ELSE_PERROR(pthread_mutex_lock(&buffer->mutex) == 0);
     assert(buffer);
     bool isEmpty = buffer->head == NULL;
-    ASSERT_ELSE_PERROR(pthread_rwlock_unlock(&buffer->rwlock) == 0);
+    ASSERT_ELSE_PERROR(pthread_mutex_unlock(&buffer->mutex) == 0);
     return isEmpty;
 }
 
