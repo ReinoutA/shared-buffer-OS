@@ -37,6 +37,7 @@ static int print_usage() {
 
 static pthread_mutex_t threadCanRunMutex;
 
+// get the run flag, in a safe way
 static bool getThreadCanRun(void) {
     pthread_mutex_lock(&threadCanRunMutex);
     bool retValue = threadCanRun;
@@ -44,6 +45,7 @@ static bool getThreadCanRun(void) {
     return retValue;
 }
 
+// set the run flag, in a safe way
 static void setThreadCanRun(bool canRun) {
   pthread_mutex_lock(&threadCanRunMutex);
   threadCanRun = canRun;
@@ -137,7 +139,7 @@ int main(int argc, char* argv[]) {
         sleep(1);
     }
 
-    // stop all threads
+    // set a flag to indicate that all threads can shutdown
     setThreadCanRun(false);
     printf("All sensor values have been handled, buffer is empty. All threads can stop running.\n");
 

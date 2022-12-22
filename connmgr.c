@@ -105,9 +105,6 @@ void connmgr_listen(int port_number, sbuffer_t* buffer) {
 
                             int ret = sbuffer_insert_first(buffer, &data);
                             assert(ret == SBUFFER_SUCCESS);
-                            //pthread_mutex_lock(pthread_mutex);
-                            //pthread_cond_broadcast(newData);
-                            //pthread_mutex_unlock(pthread_mutex);
 
                         } else if (result == TCP_CONNECTION_CLOSED) {
                             printf("Sensor with id %" PRIu16 " disconnected\n", *tcp_last_seen_sensor_id(socket));

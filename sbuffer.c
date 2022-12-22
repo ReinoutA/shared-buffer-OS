@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
-#define SHUTDOWN_INTERVAL   10
+#define SHUTDOWN_DELAY   10
 
 struct sbuffer_node {
     struct sbuffer_node* prev;
@@ -123,10 +123,10 @@ bool sbuffer_is_closed(sbuffer_t* buffer) {
 }
 
 bool sbuffer_has_data_to_store(sbuffer_t* buffer) {
-    // create a time value, SHUTDOWN_INTERVAL seconds from now
+    // create a time value, SHUTDOWN_DELAY seconds from now
     struct timespec timeValue;
     clock_gettime(CLOCK_REALTIME, &timeValue);
-    timeValue.tv_sec += SHUTDOWN_INTERVAL;
+    timeValue.tv_sec += SHUTDOWN_DELAY;
 
     assert(buffer);
     bool hasDataToStore = false;
@@ -145,10 +145,10 @@ bool sbuffer_has_data_to_store(sbuffer_t* buffer) {
 }
 
 bool sbuffer_has_data_to_process(sbuffer_t* buffer) {
-    // create a time value, SHUTDOWN_INTERVAL seconds from now
+    // create a time value, SHUTDOWN_DELAY seconds from now
     struct timespec timeValue;
     clock_gettime(CLOCK_REALTIME, &timeValue);
-    timeValue.tv_sec += SHUTDOWN_INTERVAL;
+    timeValue.tv_sec += SHUTDOWN_DELAY;
 
     assert(buffer);
     bool hasDataToProcess = false;
@@ -293,10 +293,10 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
 
 bool sbuffer_has_data_to_remove(sbuffer_t* buffer)
 {
-    // create a time value, SHUTDOWN_INTERVAL seconds from now
+    // create a time value, SHUTDOWN_DELAY seconds from now
     struct timespec timeValue;
     clock_gettime(CLOCK_REALTIME, &timeValue);
-    timeValue.tv_sec += SHUTDOWN_INTERVAL;
+    timeValue.tv_sec += SHUTDOWN_DELAY;
 
     assert(buffer);
     bool hasDataToRemove = false;
