@@ -19,6 +19,7 @@
 #include <wait.h>
 
 static bool threadCanRun = false;
+
 static struct timespec timeRemaining;
 static struct timespec timeRequested50ms = {
         0,               /* secs (Must be Non-Negative) */ 
@@ -33,6 +34,7 @@ static int print_usage() {
     printf("Usage: <command> <port number> \n");
     return -1;
 }
+
 static pthread_mutex_t threadCanRunMutex;
 
 static bool getThreadCanRun(void) {
@@ -143,7 +145,7 @@ int main(int argc, char* argv[]) {
     printf("Close the buffer\n");
     sbuffer_close(buffer);    
 
-    printf("Shutdown threads within 10 seconds ...\n");
+    printf("Shutting down threads in 10 seconds ...\n");
     pthread_join(storagemgr_thread, NULL);
     pthread_join(datamgr_thread, NULL);
     pthread_join(removemgr_thread, NULL);
