@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
+#define SHUTDOWN_INTERVAL   10
+
 struct sbuffer_node {
     struct sbuffer_node* prev;
     sensor_data_t data;
@@ -121,10 +123,10 @@ bool sbuffer_is_closed(sbuffer_t* buffer) {
 }
 
 bool sbuffer_has_data_to_store(sbuffer_t* buffer) {
-    // create a time value, 10 seconds from now
+    // create a time value, SHUTDOWN_INTERVAL seconds from now
     struct timespec timeValue;
     clock_gettime(CLOCK_REALTIME, &timeValue);
-    timeValue.tv_sec += 10;
+    timeValue.tv_sec += SHUTDOWN_INTERVAL;
 
     assert(buffer);
     bool hasDataToStore = false;
@@ -132,7 +134,6 @@ bool sbuffer_has_data_to_store(sbuffer_t* buffer) {
     hasDataToStore = buffer->toStore != NULL;
     if (!hasDataToStore) {
         printf("nothing to store, wait\n");
-        //ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->new_Data_Available_Low_Priority, &buffer->mutex) == 0);
         int errorValue = pthread_cond_timedwait(&buffer->new_Data_Available_Low_Priority, &buffer->mutex, &timeValue);
         ASSERT_ELSE_PERROR((errorValue == 0) || (errorValue == ETIMEDOUT));
         printf("check data to store\n");
@@ -144,10 +145,10 @@ bool sbuffer_has_data_to_store(sbuffer_t* buffer) {
 }
 
 bool sbuffer_has_data_to_process(sbuffer_t* buffer) {
-    // create a time value, 10 seconds from now
+    // create a time value, SHUTDOWN_INTERVAL seconds from now
     struct timespec timeValue;
     clock_gettime(CLOCK_REALTIME, &timeValue);
-    timeValue.tv_sec += 10;
+    timeValue.tv_sec += SHUTDOWN_INTERVAL;
 
     assert(buffer);
     bool hasDataToProcess = false;
@@ -155,7 +156,6 @@ bool sbuffer_has_data_to_process(sbuffer_t* buffer) {
     hasDataToProcess = buffer->toProcess != NULL;
     if (!hasDataToProcess) {
         printf("nothing to process, wait\n");
-        //ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->new_Data_Available_High_Priority, &buffer->mutex) == 0);
         int errorValue = pthread_cond_timedwait(&buffer->new_Data_Available_High_Priority, &buffer->mutex, &timeValue);
         ASSERT_ELSE_PERROR((errorValue == 0) || (errorValue == ETIMEDOUT));
         printf("check data to process\n");
@@ -293,10 +293,10 @@ sensor_data_t sbuffer_get_last_to_store(sbuffer_t* buffer) {
 
 bool sbuffer_has_data_to_remove(sbuffer_t* buffer)
 {
-    // create a time value, 10 seconds from now
+    // create a time value, SHUTDOWN_INTERVAL seconds from now
     struct timespec timeValue;
     clock_gettime(CLOCK_REALTIME, &timeValue);
-    timeValue.tv_sec += 10;
+    timeValue.tv_sec += SHUTDOWN_INTERVAL;
 
     assert(buffer);
     bool hasDataToRemove = false;
@@ -304,7 +304,6 @@ bool sbuffer_has_data_to_remove(sbuffer_t* buffer)
     hasDataToRemove = (buffer->tail != NULL) && buffer->tail->isProcessed && buffer->tail->isStored;
     if (!hasDataToRemove) {
         printf("nothing to remove, wait\n");
-        //ASSERT_ELSE_PERROR(pthread_cond_wait(&buffer->dataToRemove, &buffer->mutex) == 0);
         int errorValue = pthread_cond_timedwait(&buffer->dataToRemove, &buffer->mutex, &timeValue);
         ASSERT_ELSE_PERROR((errorValue == 0) || (errorValue == ETIMEDOUT));
         printf("check data to remove\n");
